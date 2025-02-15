@@ -2,4 +2,19 @@ pandas
 numpy
 matplotlib
 scikit-learn
--e .
+dill
+xgboost
+lightgbm
+scipy
+pymongo
+seaborn
+streamlit
+# for model stacking
+mlxtend
+# for categorical encoding
+category_encoders
+# for imputation
+missingno
+#-e .
+
+
