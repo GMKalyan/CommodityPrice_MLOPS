@@ -90,12 +90,12 @@ class HouseDataTransformation:
             df['YrBltAndRemod'] = df['YearBuilt'] + df['YearRemodAdd']
             df['TotalSF'] = df['TotalBsmtSF'] + df['1stFlrSF'] + df['2ndFlrSF']
             df['Total_sqr_footage'] = (df['BsmtFinSF1'] + df['BsmtFinSF2'] +
-                                     df['1stFlrSF'] + df['2ndFlrSF'])
+                                       df['1stFlrSF'] + df['2ndFlrSF'])
             df['Total_Bathrooms'] = (df['FullBath'] + (0.5 * df['HalfBath']) +
-                                   df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']))
+                                     df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']))
             df['Total_porch_sf'] = (df['OpenPorchSF'] + df['3SsnPorch'] +
-                                  df['EnclosedPorch'] + df['ScreenPorch'] +
-                                  df['WoodDeckSF'])
+                                     df['EnclosedPorch'] + df['ScreenPorch'] +
+                                     df['WoodDeckSF'])
             
             # Create binary features
             df['haspool'] = df['PoolArea'].apply(lambda x: 1 if x > 0 else 0)
@@ -145,6 +145,11 @@ class HouseDataTransformation:
             if 'Id' in test_df.columns:
                 test_df = test_df.drop(['Id'], axis=1)
 
+            # Remove nulls from target variable
+            logging.info(f"Training samples before removing nulls: {len(train_df)}")
+            train_df = train_df.dropna(subset=['SalePrice'])
+            logging.info(f"Training samples after removing null prices: {len(train_df)}")
+
             # Remove outliers from training data
             train_df = train_df[train_df.GrLivArea < 4500].reset_index(drop=True)
 
@@ -167,28 +172,19 @@ class HouseDataTransformation:
             logging.info("Obtaining preprocessing object")
             preprocessing_obj = self.get_data_transformer_object()
 
-            logging.info("Applying preprocessing object on training and testing datasets.")
             input_feature_train_arr = preprocessing_obj.fit_transform(input_feature_train_df)
             input_feature_test_arr = preprocessing_obj.transform(input_feature_test_df)
 
-            train_arr = np.c_[input_feature_train_arr, np.array(target_feature_train_df)]
-            test_arr = input_feature_test_arr
-
-            logging.info("Saved preprocessing object.")
             save_object(
                 file_path=self.data_transformation_config.preprocessor_obj_file_path,
                 obj=preprocessing_obj
             )
 
-            return (
-                train_arr,
-                test_arr,
-                self.data_transformation_config.preprocessor_obj_file_path,
-            )
+            return input_feature_train_arr, input_feature_test_arr, self.data_transformation_config.preprocessor_obj_file_path
 
         except Exception as e:
             raise CustomException(e, sys)
-        
+
 @dataclass
 class CarDataTransformationConfig:
     preprocessor_obj_file_path = os.path.join('artifacts', 'car', 'preprocessor.pkl')
@@ -300,6 +296,9 @@ class CarDataTransformation:
             # Debug information
             logging.info(f"Train columns: {train_df.columns.tolist()}")
             logging.info(f"Test columns: {test_df.columns.tolist()}")
+            logging.info(f"Train columns before preprocessing: {train_df.columns.tolist()}")
+            logging.info(f"Test columns before preprocessing: {test_df.columns.tolist()}")
+
 
             # Drop ID column
             if 'id' in train_df.columns:
@@ -315,6 +314,9 @@ class CarDataTransformation:
             # Create features
             train_df = self.create_features(train_df)
             test_df = self.create_features(test_df)
+            logging.info(f"Train columns after feature engineering: {train_df.columns.tolist()}")
+            logging.info(f"Test columns after feature engineering: {test_df.columns.tolist()}")
+
 
             # Split features and target
             target_column_name = "price"
@@ -328,15 +330,22 @@ class CarDataTransformation:
             # Transform data
             input_feature_train_arr = preprocessing_obj.fit_transform(input_feature_train_df)
             input_feature_test_arr = preprocessing_obj.transform(input_feature_test_df)
-
+        
+            logging.info(f"Train features after preprocessing: {input_feature_train_arr.shape[1]}")
+            logging.info(f"Test features after preprocessing: {input_feature_test_arr.shape[1]}")
             train_arr = np.c_[input_feature_train_arr, np.array(target_feature_train_df)]
-            test_arr = input_feature_test_arr
+            test_arr = input_feature_test_arr  # Don't add target to test data
+
+            logging.info(f"Final train array shape: {train_arr.shape}")
+            logging.info(f"Final test array shape: {test_arr.shape}")
 
             # Save preprocessor
             save_object(
                 file_path=self.data_transformation_config.preprocessor_obj_file_path,
                 obj=preprocessing_obj
             )
+            logging.info(f"Final train array shape: {train_arr.shape}")
+            logging.info(f"Final test array shape: {test_arr.shape}")
 
             return (
                 train_arr,
@@ -378,34 +387,63 @@ class CarDataTransformation:
 
 if __name__=="__main__":
     try:
-        # Test Car Price Transformation only
+        # Test Car Price Transformation
         logging.info("\n>>>>>>> Starting Car Price Data Transformation >>>>>")
         car_obj = CarDataTransformation()
         car_train_path = os.path.join('artifacts', 'car', 'train.csv')
         car_test_path = os.path.join('artifacts', 'car', 'test.csv')
         
-        # Verify directories
+        # Verify car directories
         logging.info(f"Checking if car artifacts directory exists: {os.path.exists(os.path.join('artifacts', 'car'))}")
         
-        # Load and check data
+        # Load and check car data
         train_df = pd.read_csv(car_train_path)
         test_df = pd.read_csv(car_test_path)
-        logging.info("Step 1: Data Loading - Complete")
-        logging.info(f"Train DataFrame Shape: {train_df.shape}")
-        logging.info(f"Test DataFrame Shape: {test_df.shape}")
+        logging.info("Step 1: Car Data Loading - Complete")
+        logging.info(f"Car Train DataFrame Shape: {train_df.shape}")
+        logging.info(f"Car Test DataFrame Shape: {test_df.shape}")
         
-        # Attempt transformation
-        logging.info("Step 2: Starting Data Transformation")
-        car_train_arr, car_test_arr, preprocessor_path = car_obj.initiate_data_transformation(car_train_path, car_test_path)
+        # Attempt car transformation
+        logging.info("Step 2: Starting Car Data Transformation")
+        car_train_arr, car_test_arr, car_preprocessor_path = car_obj.initiate_data_transformation(car_train_path, car_test_path)
         
-        # Verify preprocessor file
-        logging.info(f"Step 3: Checking preprocessor file")
-        logging.info(f"Preprocessor path: {preprocessor_path}")
-        logging.info(f"Preprocessor file exists: {os.path.exists(preprocessor_path)}")
+        # Verify car preprocessor file
+        logging.info(f"Step 3: Checking car preprocessor file")
+        logging.info(f"Car Preprocessor path: {car_preprocessor_path}")
+        logging.info(f"Car Preprocessor file exists: {os.path.exists(car_preprocessor_path)}")
         
         logging.info("Car data transformation completed successfully")
         logging.info(f"Car Transformed Train array shape: {car_train_arr.shape}")
         logging.info(f"Car Transformed Test array shape: {car_test_arr.shape}")
+
+        # Test House Price Transformation
+        logging.info("\n>>>>>>> Starting House Price Data Transformation >>>>>")
+        house_obj = HouseDataTransformation()
+        house_train_path = os.path.join('artifacts', 'house', 'train.csv')
+        house_test_path = os.path.join('artifacts', 'house', 'test.csv')
+        
+        # Verify house directories
+        logging.info(f"Checking if house artifacts directory exists: {os.path.exists(os.path.join('artifacts', 'house'))}")
+        
+        # Load and check house data
+        train_df = pd.read_csv(house_train_path)
+        test_df = pd.read_csv(house_test_path)
+        logging.info("Step 1: House Data Loading - Complete")
+        logging.info(f"House Train DataFrame Shape: {train_df.shape}")
+        logging.info(f"House Test DataFrame Shape: {test_df.shape}")
+        
+        # Attempt house transformation
+        logging.info("Step 2: Starting House Data Transformation")
+        house_train_arr, house_test_arr, house_preprocessor_path = house_obj.initiate_data_transformation(house_train_path, house_test_path)
+        
+        # Verify house preprocessor file
+        logging.info(f"Step 3: Checking house preprocessor file")
+        logging.info(f"House Preprocessor path: {house_preprocessor_path}")
+        logging.info(f"House Preprocessor file exists: {os.path.exists(house_preprocessor_path)}")
+        
+        logging.info("House data transformation completed successfully")
+        logging.info(f"House Transformed Train array shape: {house_train_arr.shape}")
+        logging.info(f"House Transformed Test array shape: {house_test_arr.shape}")
 
     except Exception as e:
         logging.error(f"Error occurred in data transformation: {str(e)}")

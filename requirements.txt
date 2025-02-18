@@ -9,12 +9,13 @@ scipy
 pymongo
 seaborn
 streamlit
-# for model stacking
 mlxtend
-# for categorical encoding
 category_encoders
-# for imputation
-missingno
+catboost
+tensorflow
+keras
+hyperopt
+optuna
 #-e .
 
 
