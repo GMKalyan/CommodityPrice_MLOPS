@@ -16,6 +16,9 @@ tensorflow
 keras
 hyperopt
 optuna
+fastapi
+uvicorn
+pydantic
 #-e .
 
 

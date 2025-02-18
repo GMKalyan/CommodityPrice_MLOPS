@@ -1,0 +1,52 @@
+from pydantic import BaseModel
+
+class CarPredictionInput(BaseModel):
+    brand: str
+    model: str
+    model_year: int
+    milage: float
+    fuel_type: str
+    engine: str
+    transmission: str
+    ext_col: str
+    int_col: str
+    accident: str
+    clean_title: str
+
+class HousePredictionInput(BaseModel):
+    MSSubClass: int
+    MSZoning: str
+    LotArea: int
+    LotShape: str
+    BldgType: str
+    HouseStyle: str
+    OverallQual: int
+    OverallCond: int
+    YearBuilt: int
+    RoofStyle: str
+    Exterior1st: str
+    Foundation: str
+    BsmtQual: str
+    BsmtExposure: str
+    BsmtFinType1: str
+    HeatingQC: str
+    CentralAir: str
+    GrLivArea: int
+    BedroomAbvGr: int
+    KitchenQual: str
+    TotRmsAbvGrd: int
+    Functional: str
+    Fireplaces: int
+    GarageType: str
+    GarageFinish: str
+    GarageCars: int
+    GarageArea: int
+    PavedDrive: str
+    WoodDeckSF: int
+    OpenPorchSF: int
+    Fence: str
+    MoSold: int
+    YrSold: int
+
+class PredictionResponse(BaseModel):
+    predicted_price: float
